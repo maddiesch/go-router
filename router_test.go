@@ -22,19 +22,38 @@ func TestRouter(t *testing.T) {
 	t.Run("given a basic router with sub routers", func(t *testing.T) {
 		r := router.New()
 
-		r.Use(middleware.Logger(slog.LevelInfo))
+		r.Use(middleware.RequestID(), middleware.Logger(slog.LevelInfo))
 
 		r.HandleFunc(http.MethodGet, "/", func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 		})
 
-		sub := r.Sub("/api")
-		sub.HandleFunc(http.MethodGet, "/posts/:id", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("id:" + r.PathValue("id")))
+		r.Handle(http.MethodGet, "/health-check", router.HealthCheckHandler())
+
+		r.Sub("/api", func(sub *router.Router) {
+			sub.Use(middleware.NoCache())
+			sub.HandleFunc(http.MethodGet, "/posts/:id", func(w http.ResponseWriter, r *http.Request) {
+				w.Write([]byte("id:" + r.PathValue("id")))
+			})
 		})
 
 		s := httptest.NewServer(r)
 		t.Cleanup(s.Close)
+
+		t.Run("requesting a health check", func(t *testing.T) {
+			req, _ := http.NewRequest(http.MethodGet, s.URL+"/health-check", nil)
+
+			resp, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+			content, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			assert.Equal(t, "OK", string(content))
+		})
 
 		t.Run("requesting a root path", func(t *testing.T) {
 			req, _ := http.NewRequest(http.MethodGet, s.URL+"/", nil)

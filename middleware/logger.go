@@ -10,6 +10,7 @@ func Logger(level slog.Level) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			request := slog.Group("request",
+				slog.String("id", req.Header.Get("X-Request-ID")),
 				slog.String("method", req.Method),
 				slog.String("path", req.URL.Path),
 			)

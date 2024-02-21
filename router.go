@@ -28,12 +28,17 @@ type Router struct {
 	middlewares []func(http.Handler) http.Handler
 }
 
-func (r *Router) Sub(path string) *Router {
+func (r *Router) SubRouter(path string) *Router {
 	return &Router{
 		router:      r.router,
 		path:        r.fullPath(path),
 		middlewares: r.middlewares,
 	}
+}
+
+func (r *Router) Sub(path string, fn func(*Router)) {
+	sub := r.SubRouter(path)
+	fn(sub)
 }
 
 func (r *Router) fullPath(path string) string {
@@ -49,15 +54,15 @@ func (r *Router) HandleFunc(method, path string, h func(w http.ResponseWriter, r
 }
 
 func (r *Router) Handle(method, path string, h http.Handler) {
-	fullPath := r.fullPath(path)
 	for i := len(r.middlewares) - 1; i >= 0; i-- {
 		h = r.middlewares[i](h)
 	}
 
-	r.router.Handle(method, fullPath, func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	r.router.Handle(method, r.fullPath(path), func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		for _, p := range p {
 			r.SetPathValue(p.Key, p.Value)
 		}
+
 		h.ServeHTTP(w, r)
 	})
 }
