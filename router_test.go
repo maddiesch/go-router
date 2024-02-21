@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/maddiesch/go-router"
 	"github.com/maddiesch/go-router/middleware"
@@ -29,6 +30,20 @@ func TestRouter(t *testing.T) {
 		})
 
 		r.Handle(http.MethodGet, "/health-check", router.HealthCheckHandler())
+
+		r.HandleFunc(http.MethodGet, "/flush", func(w http.ResponseWriter, r *http.Request) {
+			rc := http.NewResponseController(w)
+			if err := rc.SetWriteDeadline(time.Now().Add(1 * time.Second)); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			if err := rc.Flush(); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			} else {
+				w.WriteHeader(http.StatusOK)
+			}
+		})
 
 		r.Sub("/api", func(sub *router.Router) {
 			sub.Use(middleware.NoCache())
@@ -111,6 +126,16 @@ func TestRouter(t *testing.T) {
 
 			assert.Equal(t, http.StatusOK, resp.StatusCode)
 			assert.Equal(t, "custom-id", resp.Header.Get("X-Request-ID"))
+		})
+
+		t.Run("ensure handler response writer still supports Flush", func(t *testing.T) {
+			req, _ := http.NewRequest(http.MethodGet, s.URL+"/flush", nil)
+
+			resp, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
 		})
 	})
 }
