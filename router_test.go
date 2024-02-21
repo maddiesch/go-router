@@ -37,6 +37,14 @@ func TestRouter(t *testing.T) {
 			})
 		})
 
+		customRequestID := middleware.RequestID(func() string {
+			return "custom-id"
+		})
+
+		r.Handle(http.MethodGet, "/custom-request-id", customRequestID(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		})))
+
 		r.HandleFunc(http.MethodGet, "/panic", func(w http.ResponseWriter, r *http.Request) {
 			panic("testing panic recovery")
 		})
@@ -92,6 +100,17 @@ func TestRouter(t *testing.T) {
 			defer resp.Body.Close()
 
 			assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		})
+
+		t.Run("getting a custom request id", func(t *testing.T) {
+			req, _ := http.NewRequest(http.MethodGet, s.URL+"/custom-request-id", nil)
+
+			resp, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+			assert.Equal(t, "custom-id", resp.Header.Get("X-Request-ID"))
 		})
 	})
 }

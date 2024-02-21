@@ -21,6 +21,7 @@ func RequestID(provider ...func() string) func(http.Handler) http.Handler {
 			id := fn()
 
 			r.Header.Set("X-Request-ID", id)
+			w.Header().Set("X-Request-ID", id)
 
 			next.ServeHTTP(w, r)
 		})
