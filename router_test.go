@@ -37,6 +37,10 @@ func TestRouter(t *testing.T) {
 			})
 		})
 
+		r.HandleFunc(http.MethodGet, "/panic", func(w http.ResponseWriter, r *http.Request) {
+			panic("testing panic recovery")
+		})
+
 		s := httptest.NewServer(r)
 		t.Cleanup(s.Close)
 
@@ -78,6 +82,16 @@ func TestRouter(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Equal(t, "id:foobar", string(content))
+		})
+
+		t.Run("requesting a panic route", func(t *testing.T) {
+			req, _ := http.NewRequest(http.MethodGet, s.URL+"/panic", nil)
+
+			resp, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 		})
 	})
 }

@@ -1,6 +1,7 @@
 package router
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -15,7 +16,9 @@ func New() *Router {
 	r.router.RedirectTrailingSlash = true
 	r.router.HandleMethodNotAllowed = false
 	r.router.RedirectFixedPath = true
-	r.router.PanicHandler = func(w http.ResponseWriter, r *http.Request, i interface{}) {
+	r.router.PanicHandler = func(w http.ResponseWriter, r *http.Request, i any) {
+		slog.ErrorContext(r.Context(), "Panic Recovered", slog.Any("panic", i))
+
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}
 
