@@ -12,9 +12,7 @@ import (
 
 func TestRun(t *testing.T) {
 	t.Run("given a cancel context", func(t *testing.T) {
-		s := &http.Server{
-			Addr: ":8990",
-		}
+		s := router.NewServer(":8990", nil)
 
 		ctx, cancel := context.WithCancel(context.Background())
 
@@ -29,9 +27,7 @@ func TestRun(t *testing.T) {
 	})
 
 	t.Run("given a server that is shutdown", func(t *testing.T) {
-		s := &http.Server{
-			Addr: ":8990",
-		}
+		s := router.NewServer(":8990", nil)
 
 		go func() {
 			s.Shutdown(context.Background())
