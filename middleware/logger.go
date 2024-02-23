@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"time"
@@ -9,8 +10,10 @@ import (
 func Logger(level slog.Level) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			ctx := req.Context()
+
 			request := slog.Group("request",
-				slog.String("id", req.Header.Get("X-Request-ID")),
+				slog.String("id", RequestIDFromContext(ctx)),
 				slog.String("method", req.Method),
 				slog.String("path", req.URL.Path),
 			)
@@ -20,7 +23,8 @@ func Logger(level slog.Level) func(http.Handler) http.Handler {
 			}
 
 			startTime := time.Now()
-			next.ServeHTTP(rw, req)
+			ctx = context.WithValue(ctx, kContextLoggerStartTime, startTime)
+			next.ServeHTTP(rw, req.WithContext(ctx))
 			duration := time.Since(startTime)
 
 			response := slog.Group("response",

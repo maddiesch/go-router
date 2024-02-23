@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/oklog/ulid/v2"
@@ -20,10 +21,17 @@ func RequestID(provider ...func() string) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			id := fn()
 
-			r.Header.Set("X-Request-ID", id)
+			ctx := context.WithValue(r.Context(), kContextValueRequestID, id)
+
 			w.Header().Set("X-Request-ID", id)
 
-			next.ServeHTTP(w, r)
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+func RequestIDFromContext(ctx context.Context) string {
+	id, _ := ctx.Value(kContextValueRequestID).(string)
+
+	return id
 }

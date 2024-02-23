@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/maddiesch/go-router"
 	"github.com/maddiesch/go-router/middleware"
 	"github.com/stretchr/testify/assert"
@@ -26,6 +27,7 @@ func TestRouter(t *testing.T) {
 		r.Use(middleware.RequestID(), middleware.Logger(slog.LevelInfo))
 
 		r.HandleFunc(http.MethodGet, "/", func(w http.ResponseWriter, r *http.Request) {
+			spew.Dump(r.Context())
 			w.WriteHeader(http.StatusOK)
 		})
 
@@ -40,8 +42,6 @@ func TestRouter(t *testing.T) {
 
 			if err := rc.Flush(); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
-			} else {
-				w.WriteHeader(http.StatusOK)
 			}
 		})
 
