@@ -7,7 +7,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-func New() *Router {
+func New(config ...RouterConfig) *Router {
 	r := &Router{
 		router: httprouter.New(),
 		path:   "/",
@@ -22,13 +22,23 @@ func New() *Router {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}
 
+	r.Configure(config...)
+
 	return r
 }
+
+type RouterConfig func(*httprouter.Router)
 
 type Router struct {
 	router      *httprouter.Router
 	path        string
 	middlewares []func(http.Handler) http.Handler
+}
+
+func (r *Router) Configure(config ...RouterConfig) {
+	for _, config := range config {
+		config(r.router)
+	}
 }
 
 func (r *Router) SubRouter(path string) *Router {
